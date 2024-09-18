@@ -8,5 +8,6 @@ public class LoginPanel : MonoBehaviour {
 	private void Awake() {
 		_btnLogin = transform.Find("BtnLogin").GetComponent<Button>();
 		_btnLogin.onClick.AddListener(() => { SceneManager.LoadScene("Login"); });
+		Debug.Log("LoginPanel Awake");
 	}
 }
