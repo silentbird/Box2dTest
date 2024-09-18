@@ -107,7 +107,7 @@ public class ToolbarExtend {
 				// LuaModule.Instance.RestartGameForEditor();
 				// EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 				// EditorApplication.isPlaying = false; // 停止播放
-				Application.Quit();
+				Application.Quit(); 
 				CompileAndRestart();
 			}
 
