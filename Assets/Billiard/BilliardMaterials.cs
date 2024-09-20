@@ -15,8 +15,8 @@ namespace Billiard
             new Color32(255, 69, 0, 255), //Orange
             new Color32(34, 139, 34, 255), //Green
             new Color32(128, 0, 0, 255), //Maroon
-            new Color32(0, 0, 0, 255), //Black
-            new Color32(255, 255, 255, 255) //White
+            new Color32(0, 0, 0, 255) //Black
+            // new Color32(255, 255, 255, 255) //White
         };
 
 

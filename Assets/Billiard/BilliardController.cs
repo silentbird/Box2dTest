@@ -1,35 +1,34 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
+using Billiard.Tables;
 using UnityEngine;
-using Billiard;
-using UnityEngine.UI;
 
 namespace Billiard {
 	//Simulate billiard balls with different size
 	//Based on: https://matthias-research.github.io/pages/tenMinutePhysics/
 	public class BilliardController : MonoBehaviour {
+		public static BilliardController Instance { get; private set; }
+
 		public GameObject ballPrefabGO;
 
 		public BilliardTable billiardTable;
-
-		public Button resetButton;
+		public Transform ballsPlace;
+		public Transform mainBallPlace;
 
 		//Simulation properties
 		private readonly int subSteps = 5;
 
-		private readonly int numberOfBalls = 20;
 
 		//How much velocity is lost after collision between balls [0, 1]
 		//Is usually called e
 		//Elastic: e = 1 means same velocity after collision (if the objects have the same size and same speed)
-		//Inelastic: e = 0 means no velocity after collions (if the objects have the same size and same speed) and energy is lost
+		//Inelastic: e = 0 means no velocity after collision (if the objects have the same size and same speed) and energy is lost
 		private readonly float restitution = 0.8f;
 
-		private List<BilliardBall> allBalls;
+		private readonly List<BilliardBall> allBalls = new();
+		private BilliardBall mainBall;
 
 		private void Awake() {
-			resetButton.onClick.AddListener(ResetSimulation);
+			Instance = this;
 		}
 
 		private void Start() {
@@ -39,39 +38,47 @@ namespace Billiard {
 		}
 
 
-		private void ResetSimulation() {
-			allBalls = new List<BilliardBall>();
-
-			// Vector2 mapSize = new((billiardTable as Rectangle).xWidth, (billiardTable as Rectangle).zWidth);
-			// SetupBalls.AddRandomBallsWithinRectangle(ballPrefabGO, numberOfBalls, allBalls, ballRadius, ballRadius, mapSize, Vector3.zero);
-			float ballRadius = 8.5f / 2; // Standard billiard ball radius in meters
-			float rowSpacing = ballRadius * 2;
-			for (int row = 0; row < 5; row++) {
-				for (int col = 0; col <= row; col++) {
-					float z = col * rowSpacing - row * ballRadius;
-					float x = Mathf.Cos(Mathf.Deg2Rad * 30) * row * rowSpacing;
-					var pos = new Vector3(x, 0, z);
-					SetupBalls.AddBall(ballPrefabGO, allBalls, pos, ballRadius * 2);
-				}
+		public void ResetSimulation() {
+			if (allBalls.Count > 0) {
+				allBalls.ForEach(ball => Destroy(ball.ballTransform.gameObject));
+				allBalls.Clear();
 			}
+
+			float ballRadius = ConstDefine.Radius / 2; // Standard billiard ball radius in meters
+			float ballCalibre = ballRadius * 2;
 
 
 			BilliardMaterials.GiveBallsRandomColor(ballPrefabGO, allBalls);
-			var mainBall = SetupBalls.AddBall(ballPrefabGO, allBalls, new Vector3(-70, 0, 0), ballRadius * 2);
-			mainBall.vel = new Vector3(100, 0, 0);
+			mainBall = SetupBalls.AddBall(ballPrefabGO, allBalls, new Vector3(0, ballRadius, 0), ballCalibre, mainBallPlace);
 
-			//Give each ball a velocity
-			// foreach (BilliardBall b in allBalls)
-			// {
-			//     float maxVel = 40f;
-			//
-			//     float randomVelX = Random.Range(-maxVel, maxVel);
-			//     float randomVelZ = Random.Range(-maxVel, maxVel);
-			//
-			//     Vector3 randomVel = new Vector3(randomVelX, 0f, randomVelZ);
-			//
-			//     b.vel = randomVel;
-			// }
+			// 初始条件
+			float linearVelocity = 0.0f; // 线速度 (m/s)
+			float angularVelocity = 0.0f; // 角速度 (rad/s)
+			float force = 10.0f; // 向右的瞬时力 (N)
+			float timeStep = 0.01f; // 时间步长 (秒)
+			// 力作用在台球表面，产生线速度和角速度
+			float acceleration = force / ConstDefine.Mass; // 线加速度 a = F/m
+			linearVelocity = acceleration * timeStep; // 初始线速度
+
+			// 计算力矩和角加速度
+			float torque = force * ConstDefine.Radius; // 力矩 τ = F * R
+			float angularAcceleration = torque / ConstDefine.Inertia; // 角加速度 α = τ / I
+			angularVelocity = angularAcceleration * timeStep; // 初始角速度
+			mainBall.linearVelocity = new Vector3(0, 0, linearVelocity);
+			mainBall.angularVelocity = new Vector3(0, 0, angularVelocity);
+			Debug.Log($"初始线速度: {linearVelocity} m/s");
+			Debug.Log($"初始角速度: {angularVelocity} rad/s");
+
+
+			for (int row = 0; row < 5; row++) {
+				for (int col = 0; col <= row; col++) {
+					float x = col * ballCalibre - row * ballRadius;
+					float z = Mathf.Cos(Mathf.Deg2Rad * 30) * row * ballCalibre;
+					var pos = new Vector3(x, ballRadius, z);
+					SetupBalls.AddBall(ballPrefabGO, allBalls, pos, ballCalibre, ballsPlace);
+					return;
+				}
+			}
 		}
 
 
@@ -84,12 +91,12 @@ namespace Billiard {
 
 
 		private void FixedUpdate() {
-			float sdt = Time.fixedDeltaTime / (float)subSteps;
+			float sdt = Time.fixedDeltaTime / subSteps;
 
 			for (int i = 0; i < allBalls.Count; i++) {
 				BilliardBall thisBall = allBalls[i];
 
-				thisBall.SimulateBall(subSteps, sdt);
+				thisBall.SimulateBall(subSteps, sdt, billiardTable.friction);
 
 				//Check collision with the other balls after this ball in the list of all balls
 				for (int j = i + 1; j < allBalls.Count; j++) {

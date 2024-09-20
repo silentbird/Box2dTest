@@ -1,22 +1,27 @@
-using System.Collections;
 using System.Collections.Generic;
+using Billiard.Balls;
+using Billiard.Tables;
 using UnityEngine;
 
 namespace Billiard {
 	//Add billiard balls with different configurations
 	public static class SetupBalls {
 		//Add a single ball
-		public static BilliardBall AddBall(GameObject ballPrefabGO, List<BilliardBall> allBalls, Vector3 pos, float ballRadius) {
+		public static BilliardBall AddBall(GameObject ballPrefabGO, List<BilliardBall> allBalls, Vector3 pos, float ballCalibre, Transform parent = null) {
 			GameObject newBallGO = GameObject.Instantiate(ballPrefabGO);
+			var newballTransform = newBallGO.transform;
+			if (parent != null) {
+				newballTransform.SetParent(parent);
+			}
 
 			//Pos
-			newBallGO.transform.position = pos;
+			newballTransform.localPosition = pos;
 
 			//Scale
-			newBallGO.transform.localScale = Vector3.one * ballRadius;
+			newballTransform.localScale = Vector3.one * ballCalibre;
 
 			//Add the actual ball
-			BilliardBall newBall = new(newBallGO.transform);
+			BilliardBall newBall = new(newballTransform);
 
 			allBalls.Add(newBall);
 			return newBall;
